@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Validator;
 use SimpleXMLElement;
 
 class Allcontroller extends Controller
@@ -43,11 +44,89 @@ class Allcontroller extends Controller
                 'ongkir_bandung' => substr($this->base_req($bbandung)['data']['shipping_infos'][0]['cost'], 0, 5),
                 'ongkir_surabaya' => substr($this->base_req($bsurabaya)['data']['shipping_infos'][0]['cost'], 0, 5),
                 'desc' => $this->base_req($desc)['item']['description'],
-                'img' => "https://cf.shopee.co.id/file/" . $data['image']
+                'img' => "https://cf.shopee.co.id/file/" . $data['image'],
+
             ];
         }
 
         return view('result', ['data' => $finald]);
+    }
+
+    function search(Request $request)
+    {
+        $valids = Validator::make($request->all(), [
+            'src' => 'required'
+        ]);
+
+        if ($valids->fails()) {
+            return redirect()->route('index');
+        }
+        $_usrcshopee = "https://shopee.co.id/api/v4/search/search_items?keyword=" . str_replace(" ", "+", $request->src) . "&limit=5&newest=0&order=desc&page_type=search";
+        // dd(str_replace(" ", "+",$request->)src);
+        $_usrctokped = "https://ace.tokopedia.com/search/v2/product?ob=23&st=product&q=" . str_replace(" ", "+", $request->src) . "&rows=5";
+        $_usrcblibli = "https://www.blibli.com/backend/search/products?sort=&page=1&start=0&searchTerm=" . str_replace(" ", "+", $request->src) . "&rows=5";
+
+        $_dshopee = $this->base_req($_usrcshopee)['items'];
+        $_dtokped = json_decode($this->http_request($_usrctokped))->data;
+        $_dblibli = json_decode($this->http_request($_usrcblibli))->data->products;
+        // dd($_dtokped);
+        foreach ($_dshopee as $_dshopees) {
+            $desc = "https://shopee.co.id/api/v2/item/get?itemid=" . $_dshopees['item_basic']['itemid'] . "&shopid=" . $_dshopees['item_basic']['shopid'];
+            $_dfinshopee[] = [
+                'kategori' => $_dshopees['ads_keyword'],
+                'nama' => $_dshopees['item_basic']['name'],
+                'deskripsi' => $this->base_req($desc)['item']['description'],
+                'image' => "https://cf.shopee.co.id/file/" . $_dshopees['item_basic']['image'],
+                'harga' => substr($_dshopees['item_basic']['price'], 0, 5),
+                'link' => "https://shopee.co.id/" . str_replace(' ', '-', $_dshopees['item_basic']['name']) . "-i." . $_dshopees['item_basic']['shopid'] . "." . $_dshopees['item_basic']['itemid']
+            ];
+        }
+
+        foreach ($_dtokped as $_dtokpeds) {
+            $desc = "https://tome.tokopedia.com/v2/product/" . $_dtokpeds->id;
+            $_dfintokped[] = [
+                'kategori' => explode("/", $_dtokpeds->category_breadcrumb)[0],
+                'nama' => $_dtokpeds->name,
+                'deskripsi' => json_decode($this->http_request($desc))->data->product_description,
+                'image' => $_dtokpeds->image_uri,
+                'harga' => str_replace(".", "", substr($_dtokpeds->price, 3)),
+                'link' => $_dtokpeds->uri
+            ];
+        }
+
+        foreach ($_dblibli as $_dbliblis) {
+            $desc = "https://www.blibli.com/backend/product-detail/products/" . $_dbliblis->itemSku . "/description";
+            // dd($desc);
+            $_dfinblibli[] = [
+                'kategori' => $_dbliblis->rootCategory->name,
+                'nama' => $_dbliblis->name,
+                'deskripsi' => substr(json_decode($this->http_request($desc))->data->value, 92, -39),
+                'image' => $_dbliblis->images[0],
+                'harga' => str_replace(".", "", $_dbliblis->price->minPrice),
+                'link' => "https://blibli.com" . $_dbliblis->url
+            ];
+        }
+
+        usort($_dfinshopee, function ($a, $b) {
+            return $a['harga'] > $b['harga'];
+        });
+        usort($_dfintokped, function ($a, $b) {
+            return $a['harga'] > $b['harga'];
+        });
+        usort($_dfinblibli, function ($a, $b) {
+            return $a['harga'] > $b['harga'];
+        });
+
+        $full = [
+            'shopee' => $_dfinshopee,
+            'tokped' => $_dfintokped,
+            'blibli' => $_dfinblibli
+        ];
+
+        // dd($full);
+
+        return view('search', ['data' => $full]);
+        // dd($_dblibli);
     }
 
     function download_page($path)
@@ -78,7 +157,7 @@ class Allcontroller extends Controller
         curl_setopt($curl, CURLOPT_CONNECTTIMEOUT, 0);
         curl_setopt($curl, CURLOPT_TIMEOUT, 30);
         curl_setopt($curl, CURLOPT_HTTPHEADER, array(
-            'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'
+            'Accept: application/json, text/plain, */*'
         ));
         curl_setopt($curl, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0');
         // curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
@@ -104,7 +183,21 @@ class Allcontroller extends Controller
         return $result;
     }
 
-
+    function ping($url)
+    {
+        $url = $url;
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_NOBODY, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_exec($ch);
+        $retcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        if (200 == $retcode) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     function base_req($url)
     {
@@ -117,10 +210,11 @@ class Allcontroller extends Controller
 
     function sugest(Request $request)
     {
+        $this->ping("https://www.blibli.com");
         $url = "https://www.blibli.com/backend/search/autocomplete?searchTermPrefix=" . $request->val;
         $a = $this->http_request_sugest($url);
         $data = json_decode($a);
-        dd($data);
-        return view('sugest', ['data' => $data]);
+        // dd($data->data);
+        return view('sugest', ['data' => $data->data->suggestions]);
     }
 }

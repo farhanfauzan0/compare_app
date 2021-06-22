@@ -90,14 +90,13 @@
             <div class="row">
                 <div class="col-md-3">
                     <div class="logo">
-                        <a href="#"><img src="images/logo.png" alt=""></a>
+                        <a href="#"><img src="{{ asset('tmp/images/logo.png') }}" alt=""></a>
                     </div>
                 </div>
                 <div class="col-lg-6 col-md-7 padding-fix">
-                    <form action="#" class="search-bar d-flex">
-                        <input type="text" name="search" onkeyup="recomensrc()" id="src-val"
-                            placeholder="I'm looking for...">
-                        <button type="submit"><i class="fa fa-search"></i></button>
+                    <form action="{{ route('search') }}" method="get" class="search-bar d-flex">
+                        <input autocomplete="off" type="text" name="src" id="src-val" placeholder="Cari">
+                        <button type="submit" id="src-btn"><i class="fa fa-search"></i></button>
                         <div class="sugest-container">
 
                         </div>
@@ -155,10 +154,10 @@
                                         <a class="nav-link active" data-toggle="tab" href="#grid"><i
                                                 class="fa fa-th-large"></i></a>
                                     </li>
-                                    <li class="nav-item">
+                                    {{-- <li class="nav-item">
                                         <a class="nav-link" data-toggle="tab" href="#list"><i
                                                 class="fa fa-th-list"></i></a>
-                                    </li>
+                                    </li> --}}
                                 </ul>
                             </div>
                             <!-- <div class="sortby">
@@ -252,18 +251,14 @@
 
     <script>
         $(document).ready(function() {
-            // var _datake = $('#datake').html();
-            // $.ajax({
-            //     type: 'GET',
-            //     url: "{{ route('first.load') }}",
-            //     cache: false
-            // }).then(function(data) {
-            //     $('.tab-content').html(data);
-            // });
-            // fucntion rekomensrc() {
-            //     var _val = $('#src-val').val();
-
-            // }
+            var _datake = $('#datake').html();
+            $.ajax({
+                type: 'GET',
+                url: "{{ route('first.load') }}",
+                cache: false
+            }).then(function(data) {
+                $('.tab-content').html(data);
+            });
 
         });
 
@@ -278,6 +273,11 @@
                 }, ms || 0);
             };
         }
+
+        $('#src-btn').click(function() {
+            var _val = $('#src-val').val();
+            console.log(_val);
+        });
 
         // $(window).scroll(function() {
         //     if ($(window).scrollTop() >= ($(document).height() - $(window).height()) * 0.8) {
@@ -294,14 +294,12 @@
 
 
         function recomensrc() {
-
-
-            var _val = $('#src-val').val();
             setTimeout(function() {
+                var _val = $('#src-val').val();
                 $.ajax({
                     url: "{{ route('sugest') }}",
                     data: {
-                        _token: "{{ csrf_token() }}",
+                        // _token: "{{ csrf_token() }}",
                         val: _val
                     },
                     type: "GET",
@@ -309,7 +307,7 @@
                 }).then(function(data) {
                     $('.sugest-container').html(data);
                 });
-            }, 1000)
+            }, 2000)
         }
 
     </script>
