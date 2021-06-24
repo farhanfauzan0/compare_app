@@ -6,7 +6,7 @@
 <head>
     <meta charset="utf-8">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
-    <title>XeMart</title>
+    <title>Aplikasi Pembanding Harga Sembako</title>
     <meta name="description" content="">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -71,7 +71,11 @@
 
                                 <li class="list-inline-item"><a href="{{ route('index.login') }}"><img
                                             src="tmp/images/login.png" alt="">Login</a></li>
+                                <li class="list-inline-item"><a href="{{ route('index.register') }}"><img
+                                            src="tmp/images/user.png" alt="">Register</a></li>
                             @else
+                                <li class="list-inline-item"><a href="#"><img src="tmp/images/user.png"
+                                            alt="">{{ Auth::guard('web')->user()->nama }}</a></li>
                                 <li class="list-inline-item"><a href="{{ route('logout') }}"><img
                                             src="tmp/images/user.png" alt="">Logout</a>
                                 </li>

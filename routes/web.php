@@ -31,6 +31,6 @@ Route::middleware(['auth:web'])->group(function () {
 
 Route::get('/', [Allcontroller::class, 'index'])->name('index');
 Route::get('/sugest', [Allcontroller::class, 'sugest'])->name('sugest');
-Route::get('/first/load', [Allcontroller::class, 'req_first'])->name('first.load');
 
+Route::get('/first/load', [Allcontroller::class, 'req_first'])->name('first.load');
 Route::get('/search/v1/', [Allcontroller::class, 'search'])->name('search');

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
 use SimpleXMLElement;
@@ -25,35 +26,43 @@ class Allcontroller extends Controller
 
     function req_first(Request $request)
     {
-        $url = "https://shopee.co.id/api/v4/recommend/recommend?bundle=daily_discover_main&item_card=1&limit=15&offset=120";
-        $a = $this->base_req($url);
-        // $url = "https://ace.tokopedia.com/search/v2/product?ob=23&st=product&q=macbook&data=100";
+        if (Auth::guard('web')->check()) {
+            $url = "https://shopee.co.id/api/v4/search/search_items?keyword=sembako&limit=6&newest=0&order=desc&page_type=search";
+            $a = $this->base_req($url);
+            // dd($a);
+            // $url = "https://ace.tokopedia.com/search/v2/product?ob=23&st=product&q=macbook&data=100";
 
-        foreach ($a['data']['sections'][0]['data']['item'] as $data) {
-            $bjakarta = "https://shopee.co.id/api/v4/pdp/get_shipping_info?city=KOTA%20JAKARTA%20PUSAT&district=MENTENG&itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'] . "&state=DKI%20JAKARTA";
-            $bbandung = "https://shopee.co.id/api/v4/pdp/get_shipping_info?city=KOTA%20BANDUNG&district=ANDIR&itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'] . "&state=JAWA%20BARAT";
-            $bsurabaya = "https://shopee.co.id/api/v4/pdp/get_shipping_info?city=KOTA%20SURABAYA&district=ASEMROWO&itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'] . "&state=JAWA%20TIMUR";
-            $desc = "https://shopee.co.id/api/v2/item/get?itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'];
-            $finald[] = [
-                'shopid' => $data['shopid'],
-                'itemid' => $data['itemid'],
-                'nama' => $data['name'],
-                'lokasi' => $data['shop_location'],
-                'harga' => substr($data['price'], 0, 5),
-                'ongkir_jakarta' => substr($this->base_req($bjakarta)['data']['shipping_infos'][0]['cost'], 0, 5),
-                'ongkir_bandung' => substr($this->base_req($bbandung)['data']['shipping_infos'][0]['cost'], 0, 5),
-                'ongkir_surabaya' => substr($this->base_req($bsurabaya)['data']['shipping_infos'][0]['cost'], 0, 5),
-                'desc' => $this->base_req($desc)['item']['description'],
-                'img' => "https://cf.shopee.co.id/file/" . $data['image'],
+            foreach ($a['items'] as $data) {
+                $bjakarta = "https://shopee.co.id/api/v4/pdp/get_shipping_info?city=KOTA%20JAKARTA%20PUSAT&district=MENTENG&itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'] . "&state=DKI%20JAKARTA";
+                $bbandung = "https://shopee.co.id/api/v4/pdp/get_shipping_info?city=KOTA%20BANDUNG&district=ANDIR&itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'] . "&state=JAWA%20BARAT";
+                $bsurabaya = "https://shopee.co.id/api/v4/pdp/get_shipping_info?city=KOTA%20SURABAYA&district=ASEMROWO&itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'] . "&state=JAWA%20TIMUR";
+                $desc = "https://shopee.co.id/api/v2/item/get?itemid=" . $data['itemid'] . "&shopid=" . $data['shopid'];
+                $finald[] = [
+                    'shopid' => $data['shopid'],
+                    'itemid' => $data['itemid'],
+                    'nama' => $data['item_basic']['name'],
+                    'lokasi' => $data['item_basic']['shop_location'],
+                    'harga' => substr($data['item_basic']['price'], 0, 5),
+                    'ongkir_jakarta' => substr($this->base_req($bjakarta)['data']['shipping_infos'][0]['cost'], 0, 5),
+                    'ongkir_bandung' => substr($this->base_req($bbandung)['data']['shipping_infos'][0]['cost'], 0, 5),
+                    'ongkir_surabaya' => substr($this->base_req($bsurabaya)['data']['shipping_infos'][0]['cost'], 0, 5),
+                    'desc' => $this->base_req($desc)['item']['description'],
+                    'img' => "https://cf.shopee.co.id/file/" . $data['item_basic']['image'],
 
-            ];
+                ];
+            }
+
+            return view('result', ['data' => $finald]);
+        } else {
+            return view('result1');
         }
-
-        return view('result', ['data' => $finald]);
     }
 
     function search(Request $request)
     {
+        if (!Auth::guard('web')->check()) {
+            return redirect()->route('index.login');
+        }
         $valids = Validator::make($request->all(), [
             'src' => 'required'
         ]);
